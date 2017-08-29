@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<style>
+		*{margin: 0;padding: 0;}
+		.hide{display: none;}
+		/* 游戏背景宽度为：320px,高度为：480px；游戏面板居中显示 */
+		#box{width: 320px;height: 480px;background: url(images/game_bg.jpg) no-repeat center;position: relative;}
+		/* 得分文字距离顶部12px,左边框60px，字体加粗，白色、20px号字 */
+		#score{position: absolute;left: 60px;top: 12px;color: #fff;font-size: 20px;font-weight: blod;}
+		/* 计时器宽度180px,高度18px， */
+		#blood{position: absolute;background: url(images/progress.png) no-repeat;width: 180px;height: 18px;left: 63px;top: 66px;}
+		/* 开始游戏菜单距离左侧0px,顶部200px，菜单整体宽度为320px, */
+		#menu{text-align: center;position: absolute;top: 200px;left : 0;width: 320px;}
+		/* 文字字体为30px号字，行高为50px，字体加粗，字体颜色为#f60，鼠标移入字体后显示小手状 */
+		a{text-decoration: none;color: #f60;display: block;height: 50px;line-height: 50px;font-size: 30px;font-weight: bold;cursor: pointer;}
+		/* 面板宽度为320px，距离左侧0px,距离顶部200px，字体居中显示，在游戏未结束时保持隐藏 */
+		#gameOver{color: #f60;text-align: center;height: 50px;line-height: 50px;font-size: 30px;font-weight: bold;width: 320px;position: absolute;top: 190px;left: 0;}
+		#wolfs img{position: absolute;}
+	</style>
+</head>
+<body>
+	<div id="box">
+		<div id="score">0</div>
+		<div id="blood"></div>
+		<div id="menu">
+			<a href="##" id="start">开始</a>
+			<a href="##" id="explain">游戏操作说明</a>
+		</div>
+		<div id="gameOver" class="hide">游戏结束!</div>
+		<div id="wolfs">
+			<!-- <img src="" /> -->
+		</div>
+	</div>
+</body>
+</html>
+<script type="text/javascript" src="js/jquery-3.1.0.min.js"></script>
+<script type="text/javascript">
+	//宽、高为狼图片本身宽高，狼图片在images文件夹中的“h0.png_h9.png”和“x0.png——x9.png”
+	// 狼的九个诞生地坐标为：
+	var arrPos = [
+		{left:"98px",top:"115px"},
+		{left:"17px",top:"160px"},
+		{left:"15px",top:"220px"},
+		{left:"30px",top:"293px"},
+		{left:"122px",top:"273px"},
+		{left:"207px",top:"295px"},
+		{left:"200px",top:"211px"},
+		{left:"187px",top:"141px"},
+		{left:"100px",top:"185px"}
+	];
+
+	var bloodTimer;//血条定时器
+	var upTimer;//向上定时器
+	var downTimer;//向下定时器
+	var createWolfTimer;//创建狼的定时器
+	var clickTimer;//创建点击定时器
+	var checked;//判断是否点击过
+	var model;//判断显示狼还是小灰灰
+	var i;//判断显示哪个图片
+	var fraction=0;//分数
+	var num;//图片坐标对应arrPos数组的下标
+	var num1;//记录上一次图片坐标,用来做比较
+
+
+	// 2.1 点击开始按钮，菜单消失，开始进入游戏。
+	$('#start').click(function () {
+		$('#menu').hide();//菜单消失
+		bloodRun();//运行血条定时器
+		Wolf();
+		createWolfTimer=setInterval(function () {
+			Wolf();
+		},1800);
+	});
+
+	// 2.2 计时器启动，每100毫秒，计时器的宽度减少1px。
+	// 2.5 游戏计时器结束后，弹出“游戏结束对话框”，狼图案停止出现。
+
+	//定义血条定时器
+	function bloodRun() {
+		var i=0;
+		bloodTimer=setInterval(function () {
+			i--;
+			$('#blood').css("background-position",i+"px 0");//修改背景图left坐标
+			// console.log(i)
+			if(i<=-$('#blood').width()){
+				$('#gameOver').show();//当血条全黑的时候游戏结束
+				clearInterval(bloodTimer);//关闭血条定时器
+				clearInterval(createWolfTimer);//关闭创建狼定时器
+			}
+		},100);
+	};
+
+	// 生成指定范围内随机数
+	function rand(min,max) {
+		return parseInt(Math.random()*(max-min)+min);
+	};
+
+	// 2.3 创建狼图案，灰太狼/小灰灰开始随机出现，频率为每0.8秒出现一次，灰太狼和小灰灰出现的比例分别为80%和20%.
+	//创建构造函数制造狼
+	function Wolf() {
+		var img = $('<img />');
+		var wolfs=$('#wolfs');
+		checked=true;//每次创建狼,设置狼没有被点过
+		//数组坐标0开始,
+		num=rand(0,9);
+		isRepeated(num);//判断图片位置
+		num1=num;//赋值上一次图片位置
+		//随即刷新图片位置,并添加到盒子里
+		img
+			.css({"left":arrPos[num].left,"top":arrPos[num].top})
+			.appendTo(wolfs);
+		//运行向上运动函数
+		upchange();
+		//给当前img增加点击事件
+		clickFn(img);
+	};
+
+	//判断图片刷新位置是否和上一个重复
+	function isRepeated(num) {
+		console.log(num,num1)
+		if(num==num1){
+			num=rand(0,9);//重新计算一个随即数,再判断一下位置
+			isRepeated(num);
+		};
+	};
+
+	//创建更换图片定时器-向上移动
+	function upchange() {
+		i=0;
+		if(Math.random()<0.3){
+			model="x";
+		}else{
+			model="h";
+		};
+		// console.log(model);
+		upTimer=setInterval(function () {
+			$('img').prop("src","images/"+model+i+".png");
+			i++;
+			if(i>5){
+				downchange(i,model);
+				clearInterval(upTimer);
+				return;//跳出定时器,避免出现H6的图片
+			}
+		},100)
+	};
+
+	//创建更换图片定时器-向下移动
+	function downchange(i,model) {
+		downTimer=setInterval(function () {
+			i--;
+			if(i<0){
+				clearInterval(downTimer);
+				$('#wolfs').html("");//清空狼的盒子
+				return;
+			}
+			$('img').prop("src","images/"+model+i+".png");
+		},100)
+	};
+
+	//创建点击函数
+	function clickFn(img) {
+		img.on("click",function () {//点击给当前img绑定事件
+			if(!checked){//判断是否连续点击
+				return;
+			};
+			clearInterval(upTimer);//清楚向上向下的动画
+			clearInterval(downTimer);
+			clickTimer=setInterval(function () {//点击显示对应图片被打动画
+				i++;
+				if(i>9){
+					clearInterval(clickTimer);//超过被打图片的时候清楚定时器.修改i的值
+					img.off("click");//清楚绑定事件
+					$('#wolfs').html("");//清空狼的盒子
+					return;
+				}
+				img.prop("src","images/"+model+i+".png");
+			},100);
+			scoreFn();//点击的时候运行计算分数的函数,增加或者减少分数
+			checked=!checked;//点击后当前图片置反
+		});
+	};
+
+	// 计算分数
+	function scoreFn() {
+		// 根据model判断点击的是哪个,如果是狼+10,小灰灰-10
+		if (model == "h"){
+			fraction += 10;
+		}else{
+			fraction -= 10;
+		}
+		$("#score").html(fraction);
+	};
+</script>
